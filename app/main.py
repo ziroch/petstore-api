@@ -1,31 +1,30 @@
-from fastapi import FastAPI, HTTPException
-from app.database import init_db
-from app.schemas import Pet, PetCreate
-from app import models
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.routers import pet, store, user
+
 
 app = FastAPI(
-    title="PetStore API",
-    description="Implementación RESTful basada en OpenAPI PetStore",
-    version="1.0.0"
+    title="OpenAPI Petstore",
+    description="This is a sample server Petstore server.",
+    version="1.0.0",
+    license_info={"name": "Apache-2.0", "url": "https://www.apache.org/licenses/LICENSE-2.0.html"},
+    contact={"name": "API Support", "url": "https://github.com/agimenezpy-ucom/openapi-petstore"}
 )
 
-@app.on_event("startup")
-def startup():
-    init_db()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.post("/pet", response_model=Pet, status_code=201)
-def add_pet(pet: PetCreate):
-    pet_id = models.create_pet(pet.name, pet.status)
-    return {"id": pet_id, "name": pet.name, "status": pet.status}
+app.include_router(pet.router)
+app.include_router(store.router)
+app.include_router(user.router)
 
-@app.get("/pet/{pet_id}", response_model=Pet)
-def get_pet(pet_id: int):
-    pet = models.get_pet(pet_id)
-    if not pet:
-        raise HTTPException(status_code=404, detail="Pet not found")
-    return dict(pet)
 
-@app.get("/pet", response_model=list[Pet])
-def list_pets():
-    pets = models.list_pets()
-    return [dict(p) for p in pets]
+@app.get("/", include_in_schema=False)
+def root():
+    return {"message": "PetStore API - Go to /docs for Swagger UI"}
